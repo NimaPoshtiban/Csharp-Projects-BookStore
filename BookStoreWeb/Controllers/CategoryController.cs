@@ -1,21 +1,20 @@
-﻿using BookStore.DataAccess.Data;
+﻿using BookStore.DataAccess.Repository.IRepository;
 using BookStore.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BookStoreWeb.Controllers;
 
 public class CategoryController : Controller
 {
-    private readonly ApplicationDbContext _db;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public CategoryController(ApplicationDbContext db)
+    public CategoryController(IUnitOfWork unitOfWork)
     {
-        _db = db;
+        _unitOfWork = unitOfWork;
     }
     public async Task<IActionResult> Index()
     {
-        var data = await _db.Categories.ToListAsync();
+        var data = await _unitOfWork.Category.GetAllAsync();
         return View(data);
     }
 
@@ -37,8 +36,8 @@ public class CategoryController : Controller
         {
             return View(obj);
         }
-        await _db.Categories.AddAsync(obj);
-        await _db.SaveChangesAsync();
+        await _unitOfWork.Category.AddAsync(obj);
+        await _unitOfWork.SaveAsync();
         TempData["Success"] = "Category Created Successfully";
         return RedirectToAction(nameof(Index));
     }
@@ -50,7 +49,7 @@ public class CategoryController : Controller
         {
             return NotFound();
         }
-        var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == id);
+        var category = await _unitOfWork.Category.GetFirstOrDefault(c => c.Id == id);
 
         if (category == null)
         {
@@ -72,8 +71,8 @@ public class CategoryController : Controller
             return View(obj);
         }
 
-        _db.Categories.Update(obj);
-        await _db.SaveChangesAsync();
+        _unitOfWork.Category.Update(obj);
+        await _unitOfWork.SaveAsync();
         TempData["Success"] = "Category Updated Successfully";
         return RedirectToAction(nameof(Index));
     }
@@ -86,7 +85,7 @@ public class CategoryController : Controller
         {
             return NotFound();
         }
-        var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == id);
+        var category = await _unitOfWork.Category.GetFirstOrDefault(c => c.Id == id);
 
         if (category == null)
         {
@@ -99,14 +98,14 @@ public class CategoryController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeletePOST(int? id)
     {
-        var obj = await _db.Categories.FindAsync(id);
+        var obj = await _unitOfWork.Category.GetFirstOrDefault(u => u.Id == id);
         if (obj == null)
         {
             return NotFound();
         }
 
-        _db.Categories.Remove(obj);
-        await _db.SaveChangesAsync();
+        _unitOfWork.Category.Remove(obj);
+        await _unitOfWork.SaveAsync();
         TempData["Success"] = "Category Deleted Successfully";
         return RedirectToAction(nameof(Index));
     }
