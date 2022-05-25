@@ -14,16 +14,30 @@ public class Repository<T> : IRepository<T>  where T : class
         _db = db;
         dbSet = _db.Set<T>();
     }
-    public async Task<T> GetFirstOrDefault(Expression<Func<T, bool>> filter)
+    public async Task<T> GetFirstOrDefault(Expression<Func<T, bool>> filter,string? includeProperties= null)
     {
         IQueryable<T> query = dbSet;
         query =  dbSet.Where(filter);
+        if (includeProperties != null)
+        {
+            foreach (var includeProp in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                query = query.Include(includeProp);
+            }
+        }
         return await query.FirstOrDefaultAsync();
     }
 
-    public async Task<IEnumerable<T>> GetAllAsync()
+    public async Task<IEnumerable<T>> GetAllAsync(string? includeProperties = null)
     {
         IQueryable<T> query = dbSet;
+        if (includeProperties != null)
+        {
+            foreach (var includeProp in includeProperties.Split(new char[]{','},StringSplitOptions.RemoveEmptyEntries))
+            {
+                query = query.Include(includeProp);
+            }
+        }
         return await query.ToListAsync();
     }
 
