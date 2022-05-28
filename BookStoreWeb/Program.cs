@@ -13,6 +13,13 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddRazorPages();
 
+builder.Services.ConfigureApplicationCookie(opt =>
+{
+    opt.LoginPath = $"/Identity/Account/Login";
+    opt.LogoutPath = $"/Identity/Account/Logout";
+    opt.AccessDeniedPath = $"/Identity/Account/AccessDenied";
+});
+
 builder.Services.AddScoped<IUnitOfWork,UnitOfWork>();
 
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
