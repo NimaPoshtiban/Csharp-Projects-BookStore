@@ -5,6 +5,7 @@ using BookStore.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +21,7 @@ builder.Services.ConfigureApplicationCookie(opt =>
     opt.AccessDeniedPath = $"/Identity/Account/AccessDenied";
 });
 
-builder.Services.AddScoped<IUnitOfWork,UnitOfWork>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
 
@@ -29,8 +30,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default"));
 });
 
-builder.Services.AddIdentity<IdentityUser,IdentityRole>().AddDefaultTokenProviders()
-    .AddEntityFrameworkStores<ApplicationDbContext>(); 
+builder.Services.Configure<StripeService>(builder.Configuration.GetSection("Stripe"));
+
+builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddDefaultTokenProviders()
+    .AddEntityFrameworkStores<ApplicationDbContext>();
 
 
 var app = builder.Build();
@@ -47,6 +50,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe:SecretKey").Get<string>();
+
 app.UseAuthentication();
 
 app.UseAuthorization();

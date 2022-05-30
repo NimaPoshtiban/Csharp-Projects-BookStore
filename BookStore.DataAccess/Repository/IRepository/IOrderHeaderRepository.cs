@@ -7,8 +7,9 @@ using BookStore.Models;
 
 namespace BookStore.DataAccess.Repository.IRepository;
 
-public interface IOrderHeaderRepository:IRepository<OrderHeader>
+public interface IOrderHeaderRepository : IRepository<OrderHeader>
 {
     void Update(OrderHeader obj);
     Task UpdateStatus(int id, string orderStatus, string? paymentStatus = null);
+    Task UpdateStripePaymentID(int id, string sessionId, string paymentIntentId);
 }

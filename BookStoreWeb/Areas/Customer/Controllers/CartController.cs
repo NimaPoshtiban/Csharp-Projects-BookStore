@@ -5,6 +5,9 @@ using BookStore.Models.ViewModels;
 using BookStore.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections;
+using Stripe.Checkout;
+
 
 namespace BookStoreWeb.Areas.Customer.Controllers;
 
@@ -106,10 +109,51 @@ public class CartController : Controller
             await _unitOfWork.SaveAsync();
         }
 
-        _unitOfWork.ShoppingCart.RemoveRange(ShoppingCartVM.ListCart);
+        #region Stripe Settings
+
+        var domain = @"https://localhost:7110";
+
+        var options = new SessionCreateOptions
+        {
+            LineItems = new List<SessionLineItemOptions>(),
+
+            Mode = "payment",
+            SuccessUrl = $"{domain}/Customer/Cart/OrderConfirmation?id={ShoppingCartVM.OrderHeader.Id}",
+            CancelUrl = $"{domain}/Customer/Cart/Index"
+        };
+
+        foreach (var item in ShoppingCartVM.ListCart)
+        {
+
+            var sessionLineItem = new SessionLineItemOptions
+            {
+                PriceData = new SessionLineItemPriceDataOptions
+                {
+                    UnitAmount = (long)(item.Price * 100),
+                    Currency = "usd",
+                    ProductData = new SessionLineItemPriceDataProductDataOptions
+                    {
+                        Name = item.Product.Title,
+                    },
+
+                },
+                Quantity = item.Count,
+            };
+            options.LineItems.Add(sessionLineItem);
+        }
+
+        var service = new SessionService();
+        Session session = service.Create(options);
+
+        await _unitOfWork.OrderHeader.UpdateStripePaymentID(ShoppingCartVM.OrderHeader.Id, session.Id,
+            session.PaymentIntentId);
+
         await _unitOfWork.SaveAsync();
 
-        return RedirectToAction(nameof(Index),"Home");
+        Response.Headers.Add("Location", session.Url);
+        return new StatusCodeResult(303);
+
+        #endregion
     }
 
     public async Task<IActionResult> Plus(int cartId)
@@ -142,6 +186,27 @@ public class CartController : Controller
         _unitOfWork.ShoppingCart.Remove(cart);
         await _unitOfWork.SaveAsync();
         return RedirectToAction(nameof(Index));
+    }
+
+    public async Task<IActionResult> OrderConfirmation(int id)
+    {
+        var orderHeader = await _unitOfWork.OrderHeader.GetFirstOrDefault(x => x.Id == id);
+        var service = new SessionService();
+        Session session = service.Get(orderHeader.SessionId);
+
+        // check stripe status
+        if (session.PaymentStatus.ToLower() == "paid")
+        {
+            await _unitOfWork.OrderHeader.UpdateStatus(id, SD.StatusApproved, SD.PaymentStatusApproved);
+            await _unitOfWork.SaveAsync();
+        }
+
+        var shoppingCarts = (await _unitOfWork.ShoppingCart.GetAllAsync(u=>u.ApplicationUserId==orderHeader.ApplicationUserId)).ToList();
+
+        _unitOfWork.ShoppingCart.RemoveRange(shoppingCarts);
+        await _unitOfWork.SaveAsync();
+
+        return View(id);
     }
 
     private double GetPriceBasedOnQuantity(int quantity, double price, double price50, double price100)
