@@ -35,7 +35,7 @@ public class RegisterModel : PageModel
         IUserStore<IdentityUser> userStore,
         SignInManager<IdentityUser> signInManager,
         ILogger<RegisterModel> logger,
-        IEmailSender emailSender, RoleManager<IdentityRole> roleManager,IUnitOfWork unitOfWork)
+        IEmailSender emailSender, RoleManager<IdentityRole> roleManager, IUnitOfWork unitOfWork)
     {
         _userManager = userManager;
         _userStore = userStore;
@@ -132,7 +132,7 @@ public class RegisterModel : PageModel
         Input = new InputModel()
         {
             RoleList = _roleManager.Roles.Select(x => x.Name).Select(i => new SelectListItem { Text = i, Value = i }),
-            CompanyList = (await _unitOfWork.Company.GetAllAsync()).Select(i=>new SelectListItem{Text = i.Name,Value = i.Id.ToString()})
+            CompanyList = (await _unitOfWork.Company.GetAllAsync()).Select(i => new SelectListItem { Text = i.Name, Value = i.Id.ToString() })
         };
     }
 
@@ -191,7 +191,14 @@ public class RegisterModel : PageModel
                 }
                 else
                 {
-                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    if (User.IsInRole(SD.Role_Admin))
+                    {
+                        TempData["Success"] = "New User Created Successfully";
+                    }
+                    else
+                    {
+                        await _signInManager.SignInAsync(user, isPersistent: false);
+                    }
                     return LocalRedirect(returnUrl);
                 }
             }
