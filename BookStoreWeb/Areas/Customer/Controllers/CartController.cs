@@ -170,6 +170,8 @@ public class CartController : Controller
         if (cart.Count <= 1)
         {
             _unitOfWork.ShoppingCart.Remove(cart);
+            var count = (await _unitOfWork.ShoppingCart.GetAllAsync(u => u.ApplicationUserId == cart.ApplicationUserId)).ToList().Count - 1;
+            HttpContext.Session.SetInt32(SD.SessionCart, count);
         }
         else
         {
@@ -185,6 +187,8 @@ public class CartController : Controller
         var cart = await _unitOfWork.ShoppingCart.GetFirstOrDefault(u => u.Id == cartId);
         _unitOfWork.ShoppingCart.Remove(cart);
         await _unitOfWork.SaveAsync();
+        var count = (await _unitOfWork.ShoppingCart.GetAllAsync(u => u.ApplicationUserId == cart.ApplicationUserId)).ToList().Count;
+        HttpContext.Session.SetInt32(SD.SessionCart,count);
         return RedirectToAction(nameof(Index));
     }
 
@@ -202,7 +206,7 @@ public class CartController : Controller
         }
 
         var shoppingCarts = (await _unitOfWork.ShoppingCart.GetAllAsync(u=>u.ApplicationUserId==orderHeader.ApplicationUserId)).ToList();
-
+        HttpContext.Session.Clear();
         _unitOfWork.ShoppingCart.RemoveRange(shoppingCarts);
         await _unitOfWork.SaveAsync();
 

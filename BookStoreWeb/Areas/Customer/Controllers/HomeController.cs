@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Security.Claims;
 using BookStore.DataAccess.Repository.IRepository;
 using BookStore.Models.ViewModels;
+using BookStore.Utility;
 using Microsoft.AspNetCore.Authorization;
 
 
@@ -48,13 +49,16 @@ public class HomeController : Controller
         if (cartFromDb==null)
         {
             await _unitOfWork.ShoppingCart.AddAsync(shoppingCart);
+            await _unitOfWork.SaveAsync();
+            HttpContext.Session.SetInt32(SD.SessionCart,(await _unitOfWork.ShoppingCart.GetAllAsync(u=>u.ApplicationUserId==claim.Value)).ToList().Count);
         }
         else
         {
             _unitOfWork.ShoppingCart.IncrementCount(cartFromDb, shoppingCart.Count);
+            await _unitOfWork.SaveAsync();
         }
        
-        await _unitOfWork.SaveAsync();
+        
         return RedirectToAction(nameof(Index));
     }
 
